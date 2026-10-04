@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CarePulse HealthFlow | Smart Healthcare Facility Finder & Remote OPD Queue Tokens</title>
+  <meta name="description" content="Find nearby healthcare facilities, view real-time OPD queue wait times, and secure remote tokens from home. Skip waiting rooms and travel only when your turn is called.">
+  <link rel="stylesheet" href="styles/main.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🩺</text></svg>">
+</head>
+<body>
+
+  <!-- Floating Toast Notifications Container -->
+  <div id="toastContainer" class="floating-toast-container" aria-live="polite"></div>
+
+  <!-- Site Header -->
+  <header class="site-header">
+    <div class="container">
+      <div class="nav-wrap">
+        <a href="#" class="brand-logo" aria-label="CarePulse Home">
+          <div class="logo-icon">➕</div>
+          <div class="logo-text">
+            <h1>CarePulse</h1>
+            <p>Smart OPD & Queue Platform</p>
+          </div>
+        </a>
+
+        <div class="header-actions">
+          <button id="soundToggleBtn" class="sound-toggle-btn" title="Toggle Audio Announcements">
+            <span id="soundIcon">🔊</span>
+            <span>Chimes On</span>
+          </button>
+
+          <button class="btn-header-pill" onclick="openTriageModal()">
+            <span>🩺 Symptom Triage</span>
+          </button>
+
+          <button class="btn-header-pill" onclick="openDoctorDeskModal()">
+            <span>🧑‍⚕️ Doctor Desk Simulator</span>
+          </button>
+
+          <button class="btn-header-pill btn-token-wallet-badge" onclick="openWalletModal()">
+            <span>🎫 My Active Tokens</span>
+            <span id="walletBadgeCount" class="badge-count">1</span>
+          </button>
+
+          <button class="btn-header-pill btn-emergency-sos" onclick="openEmergencyModal()">
+            <span>🚨 Emergency SOS</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Real-Time Network Pulse Ticker -->
+  <aside class="live-pulse-strip">
+    <div class="container">
+      <div class="pulse-strip-content">
+        <div class="pulse-indicator">
+          <span class="pulse-dot"></span>
+          <span>LIVE NETWORK PULSE</span>
+        </div>
+        <div class="pulse-stats-row">
+          <div class="pulse-stat-item">Facilities Online: <strong>48 Verified</strong></div>
+          <div class="pulse-stat-item">Avg OPD Wait Reduced by: <strong style="color: var(--status-emerald);">78%</strong></div>
+          <div class="pulse-stat-item">Available Trauma Bays: <strong style="color: var(--cyan-bright);">16 Ready</strong></div>
+          <div class="pulse-stat-item">Zero-Travel Consults Today: <strong>3,410 Saved</strong></div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <main>
+    <!-- Hero Section -->
+    <section class="hero-section">
+      <div class="container">
+        <div class="hero-grid">
+          <div class="hero-text-col">
+            <div class="hero-badge-tag">
+              <span>⚡ Never Wait in a Clinic Again</span>
+            </div>
+            <h2 class="hero-title">
+              Find Care Near You.<br>
+              <span class="gradient-text">Take Tokens Remotely.</span><br>
+              Walk In Right on Time.
+            </h2>
+            <p class="hero-subtitle">
+              Eliminate unnecessary hospital travel and hours wasted in crowded waiting rooms. 
+              Find real-time bed and OPD availability, get your digital token from your couch, 
+              and receive an automated <em>"Leave Home Now"</em> alert when your doctor is ready.
+            </p>
+            <div class="hero-action-buttons">
+              <button class="btn-primary" onclick="openTokenModalForFacility()">
+                <span>🎫 Get Remote Token</span>
+              </button>
+              <button class="btn-secondary" onclick="openTriageModal()">
+                <span>🩺 Smart Symptom Checker</span>
+              </button>
+              <button class="btn-secondary" onclick="openTeleconsultModal('Dr. Julian Croft')">
+                <span>💻 0-Commute Video Visit</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Hero Visual & Live Pass Preview -->
+          <div class="hero-visual-card">
+            <img src="assets/hero-banner.jpg" alt="CarePulse Smart Hospital Interface" class="hero-image-banner" loading="eager">
+            <div class="hero-quick-token-preview">
+              <div class="preview-header">
+                <span class="category-tag">Live Queue Tracker</span>
+                <span class="live-indicator-chip">● REAL-TIME SYNC</span>
+              </div>
+              <div class="token-metric-grid">
+                <div>
+                  <div class="metric-label">Your Token</div>
+                  <div id="heroTokenNum" class="metric-val">#20</div>
+                </div>
+                <div>
+                  <div class="metric-label">Now Serving</div>
+                  <div id="heroCurrentServing" class="metric-val" style="color: var(--status-emerald);">#14</div>
+                </div>
+                <div>
+                  <div class="metric-label">Est. Wait</div>
+                  <div id="heroWaitMins" class="metric-val">48m</div>
+                </div>
+              </div>
+              <div id="heroCommutePrompt" class="commute-prompt-bar relax">
+                <span>🛋️ Rest at home. We will alert you when your 15m commute matches the queue!</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Filter & Search Control Toolbar -->
+    <section class="filter-toolbar-section">
+      <div class="container">
+        <div class="toolbar-card">
+          <div class="search-and-controls-row">
+            <div class="search-input-wrap">
+              <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+              </svg>
+              <input type="text" id="searchInput" placeholder="Search facilities, doctors, specialties (e.g. Cardiology, Pediatrics, Urgent Care)..." aria-label="Search healthcare facilities">
+            </div>
+
+            <div class="toolbar-dropdowns">
+              <select id="sortSelect" class="custom-select" aria-label="Sort facilities">
+                <option value="wait">⏱️ Shortest Wait Time First</option>
+                <option value="distance">📍 Nearest Distance First</option>
+                <option value="rating">⭐ Highest Patient Rating</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="category-chips-row" role="tablist">
+            <button class="chip-btn active" data-category="all" role="tab">All Facilities</button>
+            <button class="chip-btn" data-category="urgent_care" role="tab">⚡ 24/7 Urgent Care</button>
+            <button class="chip-btn" data-category="hospital" role="tab">🏥 Multi-Specialty Hospitals</button>
+            <button class="chip-btn" data-category="clinic" role="tab">🩺 Family & Specialist Clinics</button>
+            <button class="chip-btn" data-category="diagnostic" role="tab">🧪 Diagnostics & MRI Labs</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Healthcare Facilities Grid -->
+    <section class="facilities-section">
+      <div class="container">
+        <div class="section-header">
+          <div>
+            <h2>Verified Healthcare Facilities</h2>
+            <p>Real-time queue tracking, verified doctor schedules, and remote token booking</p>
+          </div>
+        </div>
+
+        <div id="facilitiesGrid" class="facilities-grid">
+          <!-- Dynamic Facility Cards rendered via scripts/app.js -->
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Doctor Desk Floating Simulator Trigger Button -->
+  <button class="doctor-desk-floating-trigger" onclick="openDoctorDeskModal()" aria-label="Open Doctor Control Simulator">
+    <span>🧑‍⚕️ Doctor Desk Simulator</span>
+    <span style="background: rgba(255,255,255,0.25); border-radius: 50%; padding: 2px 8px; font-size: 11px;">Interactive</span>
+  </button>
+
+  <!-- Footer -->
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-content">
+        <div>
+          <div style="font-weight: 800; color: #fff; font-size: 16px; margin-bottom: 4px;">CarePulse HealthFlow</div>
+          <p>Next-generation healthcare accessibility platform reducing outpatient congestion and unnecessary commutes.</p>
+        </div>
+        <div style="text-align: right;">
+          <p>© 2026 CarePulse Health Technologies Inc. All rights reserved.</p>
+          <p style="font-size: 11px; margin-top: 4px;">If experiencing a critical medical emergency, immediately call 911 or visit the nearest trauma center.</p>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ================= MODALS & DRAWERS ================= -->
+
+  <!-- 1. Remote Token Booking Modal -->
+  <div id="tokenModal" class="custom-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="tokenModalTitle">
+    <div class="custom-modal-box">
+      <div class="modal-header">
+        <h3 id="tokenModalTitle">🎫 Get Remote OPD Queue Token</h3>
+        <button class="btn-modal-close" onclick="closeModal(tokenModal)" aria-label="Close modal">×</button>
+      </div>
+      <div class="modal-body">
+        <form id="tokenBookingForm">
+          <div class="form-group">
+            <label for="bookingFacilitySelect">Select Healthcare Facility</label>
+            <select id="bookingFacilitySelect" class="custom-select" required></select>
+          </div>
+
+          <div class="form-group">
+            <label for="bookingDoctorSelect">Select Specialist & Department</label>
+            <select id="bookingDoctorSelect" class="custom-select" required></select>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+            <div class="form-group">
+              <label for="bookingPatientName">Patient Full Name</label>
+              <input type="text" id="bookingPatientName" placeholder="e.g. Jordan Miller" required>
+            </div>
+            <div class="form-group">
+              <label for="bookingPatientPhone">Mobile Phone (for SMS Token)</label>
+              <input type="tel" id="bookingPatientPhone" placeholder="e.g. +1 (555) 019-2834" required>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="bookingCommuteMins">Your Estimated Commute Time to Facility</label>
+            <select id="bookingCommuteMins" class="custom-select">
+              <option value="10">🚗 ~10 Minutes Drive</option>
+              <option value="15" selected>🚗 ~15 Minutes Drive (Average)</option>
+              <option value="25">🚗 ~25 Minutes Drive</option>
+              <option value="40">🚗 ~40 Minutes Drive</option>
+              <option value="60">🚗 ~60 Minutes Drive</option>
+            </select>
+            <div class="form-help-text">💡 We will calculate your queue progress and notify you when to leave home!</div>
+          </div>
+
+          <div class="form-group">
+            <label for="bookingSymptoms">Reason for Visit / Symptoms</label>
+            <textarea id="bookingSymptoms" rows="2" placeholder="Briefly describe your symptoms (e.g. fever for 2 days, knee sprain, routine follow-up)..."></textarea>
+          </div>
+
+          <div class="form-group">
+            <label>Preferred Consultation Channel</label>
+            <div style="display: flex; gap: 16px; margin-top: 6px;">
+              <label style="display: inline-flex; align-items: center; gap: 8px; font-weight: 500; cursor: pointer;">
+                <input type="radio" name="bookingConsultType" value="in_person" checked>
+                <span>🏥 In-Person Walk-in (Remote Token)</span>
+              </label>
+              <label style="display: inline-flex; align-items: center; gap: 8px; font-weight: 500; cursor: pointer;">
+                <input type="radio" name="bookingConsultType" value="telehealth">
+                <span>💻 Instant Video Teleconsult</span>
+              </label>
+            </div>
+          </div>
+
+          <div style="margin-top: 24px; display: flex; justify-content: flex-end; gap: 12px;">
+            <button type="button" class="btn-secondary" onclick="closeModal(tokenModal)">Cancel</button>
+            <button type="submit" class="btn-primary">Generate Remote Token Now</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. Wallet & Digital Passbook Modal -->
+  <div id="walletModal" class="custom-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="walletModalTitle">
+    <div class="custom-modal-box" style="max-width: 680px;">
+      <div class="modal-header">
+        <h3 id="walletModalTitle">🎫 Digital OPD Passbook & Live Queue</h3>
+        <button class="btn-modal-close" onclick="closeModal(walletModal)" aria-label="Close modal">×</button>
+      </div>
+      <div class="modal-body">
+        <div id="walletTokensList">
+          <!-- Rendered dynamically -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. Doctor Admin Desk Simulator Modal -->
+  <div id="doctorDeskModal" class="custom-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="deskModalTitle">
+    <div class="custom-modal-box" style="max-width: 720px;">
+      <div class="modal-header">
+        <h3 id="deskModalTitle">🧑‍⚕️ Doctor & OPD Desk Queue Controller</h3>
+        <button class="btn-modal-close" onclick="closeModal(doctorDeskModal)" aria-label="Close modal">×</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 16px;">
+          <strong>Interactive Hospital Console:</strong> Select a physician below and click <em>"Call Next Patient"</em> to simulate how hospital staff advance the queue in real-time, emit chimes, and trigger the patient's commute departure prompt!
+        </p>
+        
+        <div id="deskDoctorSelector" class="desk-doctor-selector-grid">
+          <!-- Doctors list rendered dynamically -->
+        </div>
+
+        <div id="deskActiveConsole" class="desk-active-console">
+          <!-- Active console rendered dynamically -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. Smart Symptom Triage Modal -->
+  <div id="triageModal" class="custom-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="triageModalTitle">
+    <div class="custom-modal-box">
+      <div class="modal-header">
+        <h3 id="triageModalTitle">🩺 Clinical Symptom & Triage Navigator</h3>
+        <button class="btn-modal-close" onclick="closeModal(triageModal)" aria-label="Close modal">×</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 16px;">
+          Find the safest care level without guesswork. We will analyze your symptoms to direct you to <strong>Emergency Trauma</strong>, <strong>Urgent Care OPD</strong>, <strong>Specialist OPD</strong>, or <strong>Zero-Commute Telehealth</strong>.
+        </p>
+
+        <!-- Quick symptom chips -->
+        <div style="margin-bottom: 16px;">
+          <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 8px;">Quick Suggestions:</div>
+          <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+            <button type="button" class="btn-header-pill" onclick="fillTriageSymptom('Severe chest pain and shortness of breath')">🚨 Chest Pain</button>
+            <button type="button" class="btn-header-pill" onclick="fillTriageSymptom('High fever and severe abdominal pain')">⚡ High Fever & Abdomen</button>
+            <button type="button" class="btn-header-pill" onclick="fillTriageSymptom('Sprained ankle after basketball fall')">🦴 Sprained Ankle</button>
+            <button type="button" class="btn-header-pill" onclick="fillTriageSymptom('Mild cold, sore throat, cough for 2 days')">🌱 Cold & Sore Throat</button>
+            <button type="button" class="btn-header-pill" onclick="fillTriageSymptom('Skin rash and itching on arms')">✨ Skin Rash</button>
+          </div>
+        </div>
+
+        <form id="triageForm">
+          <div class="form-group">
+            <label for="triageSymptomsInput">What symptoms are you experiencing?</label>
+            <textarea id="triageSymptomsInput" rows="3" placeholder="Describe symptoms (e.g. chest discomfort, sprained ankle, persistent fever, sore throat)..." required></textarea>
+          </div>
+
+          <div class="form-group">
+            <label for="triageDurationSelect">How long have you had these symptoms?</label>
+            <select id="triageDurationSelect" class="custom-select">
+              <option value="sudden">Under 1 hour (Sudden onset)</option>
+              <option value="1_day" selected>12 - 24 hours</option>
+              <option value="few_days">2 - 5 days</option>
+              <option value="chronic">Over 1 week / Chronic</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Can you safely travel to a facility right now?</label>
+            <div style="display: flex; gap: 16px; margin-top: 6px;">
+              <label style="display: inline-flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer;">
+                <input type="radio" name="triageTravel" id="triageTravelRadioYes" value="yes" checked>
+                <span>Yes, I have transportation</span>
+              </label>
+              <label style="display: inline-flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer;">
+                <input type="radio" name="triageTravel" id="triageTravelRadioNo" value="no">
+                <span>Prefer to stay home / Telehealth</span>
+              </label>
+            </div>
+          </div>
+
+          <div style="margin-top: 20px;">
+            <button type="submit" class="btn-primary" style="width: 100%;">Evaluate & Recommend Best Care Route</button>
+          </div>
+        </form>
+
+        <div id="triageResultBox" style="display: none;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. Instant Teleconsultation Video Simulation Modal -->
+  <div id="teleconsultModal" class="custom-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="teleconsultTitle">
+    <div class="custom-modal-box">
+      <div class="modal-header">
+        <h3 id="teleconsultTitle">💻 Zero-Commute Virtual Teleconsultation</h3>
+        <button class="btn-modal-close" onclick="closeModal(teleconsultModal)" aria-label="Close modal">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="teleconsult-video-stage">
+          <div class="tele-doctor-avatar">👨‍⚕️</div>
+          <div class="tele-patient-pip">Your Camera 👤</div>
+          <div style="position: absolute; top: 16px; left: 16px; background: rgba(0,0,0,0.6); padding: 4px 10px; border-radius: 9999px; font-size: 11px; color: var(--status-emerald);">
+            ● HD ENCRYPTED CALL
+          </div>
+        </div>
+
+        <div style="text-align: center; margin-bottom: 20px;">
+          <h4 id="teleDocName" style="font-size: 18px; font-weight: 800;">Dr. Julian Croft</h4>
+          <p style="font-size: 13px; color: var(--text-secondary);">Board Certified Physician • Telehealth Room 01</p>
+          <div style="margin-top: 8px; font-size: 12px; color: var(--status-emerald);">
+            Connected • Audio & Video Synchronized
+          </div>
+        </div>
+
+        <div class="tele-call-controls">
+          <button class="btn-secondary" style="border-radius: 50%; width: 44px; height: 44px; padding: 0;">🎤</button>
+          <button class="btn-secondary" style="border-radius: 50%; width: 44px; height: 44px; padding: 0;">📹</button>
+          <button class="btn-tele-end" onclick="closeModal(teleconsultModal)">End Consultation</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 6. Emergency SOS & Trauma Locator Modal -->
+  <div id="emergencyModal" class="custom-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="emergencyTitle">
+    <div class="custom-modal-box">
+      <div class="modal-header" style="background: rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.3);">
+        <h3 id="emergencyTitle" style="color: #f87171;">🚨 24/7 Emergency Trauma & Ambulance SOS</h3>
+        <button class="btn-modal-close" onclick="closeModal(emergencyModal)" aria-label="Close modal">×</button>
+      </div>
+      <div class="modal-body">
+        <div style="background: rgba(239, 68, 68, 0.15); border-left: 4px solid #ef4444; padding: 12px 16px; border-radius: 8px; margin-bottom: 18px; font-size: 13px;">
+          <strong>CRITICAL EMERGENCY:</strong> If someone is unresponsive, in cardiac arrest, having a stroke, or experiencing massive hemorrhage, immediately call emergency services or dispatch below.
+        </div>
+
+        <div id="emergencyCentersList">
+          <!-- Rendered dynamically -->
+        </div>
+
+        <div style="margin-top: 18px; text-align: center;">
+          <a href="tel:911" class="btn-emergency-sos" style="display: block; padding: 14px; text-decoration: none; border-radius: 12px; font-size: 16px;">
+            🚨 CALL 911 / NATIONAL EMERGENCY DISPATCH
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="scripts/data.js"></script>
+  <script src="scripts/queue-engine.js"></script>
+  <script src="scripts/triage-engine.js"></script>
+  <script src="scripts/app.js"></script>
+</body>
+</html>
